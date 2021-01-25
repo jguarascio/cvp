@@ -39,9 +39,9 @@ for section_name in parser.sections():
                 elif file_count > 0:
                         for file in list:
                                 # Check to see if file has an error
-                                file = open(from_folder + file, 'r')
-                                contents = file.read()
-                                file.close()
+                                f = open(from_folder + file, 'r')
+                                contents = f.read()
+                                f.close()
                                 if 'java.lang.NullPointerException' in contents:
                                         os.remove(from_folder + file)
                                         logging.info('DLQ contained java.lang.NullPointerException. Deleted %s', file)
