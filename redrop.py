@@ -38,5 +38,14 @@ for section_name in parser.sections():
                         logging.info('Too many DLQ files in %s. Only %s are allowed. There are %s', from_folder, threshold, file_count)
                 elif file_count > 0:
                         for file in list:
-                                os.rename(from_folder + file, to_folder + file)
-                                logging.info('Moved %s from %s to %s', file, from_folder, to_folder)
+                                # Check to see if file has an error
+                                f = open(from_folder + file, 'r')
+                                contents = f.read()
+                                f.close()
+                                if 'java.lang.NullPointerException' in contents:
+                                        os.remove(from_folder + file)
+                                        logging.info('DLQ contained java.lang.NullPointerException. Deleted %s', file)
+                                        logging.info(contents)
+                                else:
+                                        os.rename(from_folder + file, to_folder + file)
+                                        logging.info('Moved %s from %s to %s', file, from_folder, to_folder)
