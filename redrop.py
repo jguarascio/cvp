@@ -60,6 +60,7 @@ def main():
                             with open(to_folder + file_name, 'w') as f:
                                 f.write(asciidata)
                             logging.info('DLQ file contained non ASCII characters. Fixed %s', file_name)
+                            logging.info(contents)
                         else:
                             os.rename(from_folder + file_name,
                                     to_folder + file_name)
