@@ -1,10 +1,9 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 
-import configparser
 import os
 import sys
 import logging
-
+import ConfigParser # python2 version
 
 def main():
     # Make sure the user passed a config file
@@ -14,7 +13,8 @@ def main():
         print('usage: redrop.py <config_file>')
         sys.exit(2)
 
-    parser = configparser.ConfigParser()
+    parser = ConfigParser.SafeConfigParser() # python2 version
+	#parser = configparser.ConfigParser() #python3 version
     parser.read(config_file)
 
     # Read the default section of the config file
@@ -53,12 +53,11 @@ def main():
                         logging.info(contents)
                     else:
                         # Check file for bad characters
-                        encoded_contents = contents.encode()
-                        if len(contents) != len(encoded_contents): 
+                        ascii_contents = contents.decode('ascii','ignore')
+                        if len(contents) != len(ascii_contents): 
                             os.remove(from_folder + file_name)
-                            asciidata = encoded_contents.decode("ascii","ignore")
                             with open(to_folder + file_name, 'w') as f:
-                                f.write(asciidata)
+                                f.write(ascii_contents)
                             logging.info('DLQ file contained non ASCII characters. Fixed %s', file_name)
                             logging.info(contents)
                         else:
