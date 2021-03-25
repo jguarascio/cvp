@@ -63,6 +63,10 @@ def main():
                     if file_name in skip_list:
                         logging.info('Already redropped. Skipping %s', file_name)
                         continue
+                    else:
+                        # Remember the files that were redropped
+                        with open(skip_file, 'a') as f:
+                            f.write(file_name + '\n')
 
                     # Read file contents
                     with open(from_folder + file_name, 'r') as f:
@@ -89,9 +93,6 @@ def main():
                         logging.info('Moved %s from %s to %s',
                                      file_name, from_folder, to_folder)
                         
-                        # Remember the files that were redropped
-                        with open(skip_file, 'a') as f:
-                            f.write(file_name + '\n')
 
 
 if __name__ == '__main__':
