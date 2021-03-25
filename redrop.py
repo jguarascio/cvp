@@ -21,6 +21,7 @@ def main():
 
     # Read the default section of the config file
     if parser.has_section('default'):
+        base_path = parser.get('default', 'basepath')
         log_file = parser.get('default', 'logfile')
         threshold = int(parser.get('default', 'threshold'))
     else:
@@ -38,12 +39,11 @@ def main():
     else:
         skip_list = []
 
-
     # Check each route to see if there are files waiting to be moved
     for section_name in parser.sections():
         if section_name.startswith('route'):
-            from_folder = parser.get(section_name, 'from')
-            to_folder = parser.get(section_name, 'to')
+            from_folder = base_path + parser.get(section_name, 'from')
+            to_folder = base_path + parser.get(section_name, 'to')
 
             # Skip route if path does not exist
             if not os.path.isdir(from_folder) or not os.path.isdir(to_folder):
