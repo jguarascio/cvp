@@ -4,6 +4,8 @@ import os
 import sys
 import logging
 import ConfigParser # python2 version
+#import configparser # python3 version
+
 
 def main():
     # Make sure the user passed a config file
@@ -14,25 +16,42 @@ def main():
         sys.exit(2)
 
     parser = ConfigParser.SafeConfigParser() # python2 version
-	#parser = configparser.ConfigParser() #python3 version
+    #parser = configparser.ConfigParser() #python3 version
     parser.read(config_file)
 
     # Read the default section of the config file
     if parser.has_section('default'):
-        logfile = parser.get('default', 'logfile')
+        base_path = parser.get('default', 'basepath')
+        log_file = parser.get('default', 'logfile')
+        skip_file = parser.get('default', 'skipfile')
         threshold = int(parser.get('default', 'threshold'))
     else:
-        logfile = '/var/log/cvpredrop.log'
+        log_file = 'redrop.log'
+        skip_file = 'redrop.skip'
         threshold = 10
 
-    logging.basicConfig(filename=logfile, level=logging.INFO,
+    logging.basicConfig(filename=log_file, level=logging.INFO,
                         format='%(asctime)s %(message)s')
 
+    # Read skip file if it exists
+    if os.path.isfile(skip_file):
+        with open(skip_file, 'r') as f:
+            skip_list = set(f.read().splitlines())
+    else:
+        skip_list = set()
+
     # Check each route to see if there are files waiting to be moved
+    found_list = []
     for section_name in parser.sections():
         if section_name.startswith('route'):
-            from_folder = parser.get(section_name, 'from')
-            to_folder = parser.get(section_name, 'to')
+            from_folder = base_path + parser.get(section_name, 'from')
+            to_folder = base_path + parser.get(section_name, 'to')
+
+            # Skip route if path does not exist
+            if not os.path.isdir(from_folder) or not os.path.isdir(to_folder):
+                continue 
+
+            # Get folder contents
             file_list = os.listdir(from_folder)
             file_count = len(file_list)
 
@@ -42,6 +61,12 @@ def main():
                              from_folder, threshold, file_count)
             elif file_count > 0:
                 for file_name in file_list:
+                    found_list.append(file_name)
+                    # Skip file if already redropped
+                    if file_name in skip_list:
+                        logging.info('Already redropped. Skipping %s', file_name)
+                        continue
+
                     # Read file contents
                     with open(from_folder + file_name, 'r') as f:
                         contents = f.read()
@@ -53,7 +78,8 @@ def main():
                         logging.info(contents)
                     else:
                         # Check file for bad characters
-                        ascii_contents = contents.decode('ascii','ignore')
+                        ascii_contents = contents.decode('ascii','ignore') #python2 version
+                        #ascii_contents = contents.encode().decode('ascii','ignore') #python3 version
                         if len(contents) != len(ascii_contents): 
                             os.remove(from_folder + file_name)
                             with open(to_folder + file_name, 'w') as f:
@@ -65,6 +91,14 @@ def main():
                                     to_folder + file_name)
                         logging.info('Moved %s from %s to %s',
                                      file_name, from_folder, to_folder)
+    # End looking through routes
+
+    # Save the list of files that were found in this pass
+    # This is to avoid dropping these again in the next pass if for some reason redrop didn't work
+    if found_list:
+        with open(skip_file, 'w') as f:
+            for file_name in found_list:
+                f.write(file_name + '\n')
 
 
 if __name__ == '__main__':
