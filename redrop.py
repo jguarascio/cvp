@@ -23,23 +23,25 @@ def main():
     if parser.has_section('default'):
         base_path = parser.get('default', 'basepath')
         log_file = parser.get('default', 'logfile')
+        skip_file = parser.get('default', 'skipfile')
         threshold = int(parser.get('default', 'threshold'))
     else:
-        log_file = '/var/log/cvpredrop.log'
+        log_file = 'redrop.log'
+        skip_file = 'redrop.skip'
         threshold = 10
 
     logging.basicConfig(filename=log_file, level=logging.INFO,
                         format='%(asctime)s %(message)s')
 
     # Read skip file if it exists
-    skip_file = os.path.splitext(log_file)[0] + '.skip'
     if os.path.isfile(skip_file):
         with open(skip_file, 'r') as f:
-            skip_list = f.read().splitlines()
+            skip_list = set(f.read().splitlines())
     else:
-        skip_list = []
+        skip_list = set()
 
     # Check each route to see if there are files waiting to be moved
+    found_list = []
     for section_name in parser.sections():
         if section_name.startswith('route'):
             from_folder = base_path + parser.get(section_name, 'from')
@@ -59,14 +61,11 @@ def main():
                              from_folder, threshold, file_count)
             elif file_count > 0:
                 for file_name in file_list:
+                    found_list.append(file_name)
                     # Skip file if already redropped
                     if file_name in skip_list:
                         logging.info('Already redropped. Skipping %s', file_name)
                         continue
-                    else:
-                        # Remember the files that were redropped
-                        with open(skip_file, 'a') as f:
-                            f.write(file_name + '\n')
 
                     # Read file contents
                     with open(from_folder + file_name, 'r') as f:
@@ -92,7 +91,14 @@ def main():
                                     to_folder + file_name)
                         logging.info('Moved %s from %s to %s',
                                      file_name, from_folder, to_folder)
-                        
+    # End looking through routes
+
+    # Save the list of files that were found in this pass
+    # This is to avoid dropping these again in the next pass if for some reason redrop didn't work
+    if found_list:
+        with open(skip_file, 'w') as f:
+            for file_name in found_list:
+                f.write(file_name + '\n')
 
 
 if __name__ == '__main__':
